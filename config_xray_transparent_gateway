@@ -1,0 +1,185 @@
+#Install xray
+# Site: https://github.com/XTLS/Xray-install
+bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install --beta
+
+# continue with this one
+https://tstrs.me/result/OTpO6oQBU87SstoFc5Uq
+
+
+sudo apt update -y && sudo apt upgrade -y
+
+###################              Firewall rules            ###################
+##############################################################################
+##############################################################################
+
+  "inbounds": [
+  {
+    "port": 12315,
+    "protocol": "dokodemo-door",
+    "settings": {
+      "network": "tcp,udp,icmp",
+      "followRedirect": true
+    },
+    "sniffing": {
+      "enabled": true,
+      "destOverride": ["http", "tls"]
+    }
+  }
+  ],
+
+vim /etc/rc.local
+	#!/bin/bash
+	ifconfig ens33 10.0.10.251 netmask 255.255.255.0
+	route add default gw 10.0.10.254
+	
+	iptables-restore < /etc/network/iptables.up.rules
+
+
+
+#	ifconfig [network card name] [local IP] netmask 255.255.255.0
+#	route add default gw [default gateway IP or router IP]
+
+chmod 755 /etc/rc.local
+
+
+
+echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf && sysctl -p
+
+###################              Firewall rules            ###################
+##############################################################################
+##############################################################################
+
+sudo iptables -t nat -N XRAY
+sudo iptables -t nat -A XRAY -d 192.168.201.0/30 -j RETURN
+sudo iptables -t nat -A XRAY -p tcp -j REDIRECT --to-ports 12315
+sudo iptables -t nat -A XRAY -p udp -j REDIRECT --to-ports 12315
+sudo iptables -t nat -A XRAY -p icmp -j REDIRECT --to-ports 12315
+sudo iptables -t nat -A PREROUTING -p tcp -j XRAY
+sudo iptables -t nat -A PREROUTING -p udp -j XRAY
+sudo iptables -t nat -A PREROUTING -p icmp -j XRAY
+
+###################               Config file              ###################
+##############################################################################
+##############################################################################
+
+iptables-save > /etc/network/iptables.up.rules
+iptables-restore < /etc/network/iptables.up.rules
+
+###################             increase limits            ###################
+##############################################################################
+##############################################################################
+
+### Increase limits: https://github.com/SasukeFreestyle/XTLS-Iran-Reality ####
+
+	echo "net.ipv4.tcp_keepalive_time = 90" >> /etc/sysctl.conf
+	echo "net.ipv4.ip_local_port_range = 1024 65535" >> /etc/sysctl.conf
+	echo "net.ipv4.tcp_fastopen = 3" >> /etc/sysctl.conf
+	echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
+	echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
+	echo "fs.file-max = 65535000" >> /etc/sysctl.conf && sysctl -p
+
+
+	echo "* soft     nproc          655350" >> /etc/security/limits.conf
+	echo "* hard     nproc          655350" >> /etc/security/limits.conf
+	echo "* soft     nofile         655350" >> /etc/security/limits.conf
+	echo "* hard     nofile         655350" >> /etc/security/limits.conf
+	echo "root soft     nproc          655350" >> /etc/security/limits.conf
+	echo "root hard     nproc          655350" >> /etc/security/limits.conf
+	echo "root soft     nofile         655350" >> /etc/security/limits.conf
+	echo "root hard     nofile         655350" >> /etc/security/limits.conf && sysctl -p
+
+###################          Direct IRAN Traffics          ###################
+##############################################################################
+##############################################################################
+
+https://github.com/iranxray/hope/blob/main/routing.md#%D9%85%D8%B3%D8%AF%D9%88%D8%AF%D8%B3%D8%A7%D8%B2%DB%8C-%D8%A7%D8%B2-%D8%B3%D9%85%D8%AA-%D8%B3%D8%B1%D9%88%D8%B1
+https://github.com/bootmortis/iran-hosted-domains
+https://github.com/bootmortis/iran-hosted-domains/releases/latest/download/iran.dat
+
+
+wget https://github.com/bootmortis/iran-hosted-domains/releases/latest/download/iran.dat -O /usr/local/share/xray/iran.dat
+
+
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "rules": [
+      {
+        "type": "field",
+        "inboundTag": [
+          "all-in"
+        ],
+        "port": 53,
+        "outboundTag": "dns-out"
+      },
+      {
+        "inboundTag": [
+          "api"
+        ],
+        "outboundTag": "api",
+        "type": "field"
+      },
+      {
+        "ip": [
+          "geoip:private",
+          "geoip:ir"
+        ],
+        "outboundTag": "direct",
+        "type": "field"
+      },
+      {
+      "domainMatcher": "hybrid",
+      "type": "field",
+      "domain": ["regexp:.*\\.ir$", "ext:iran.dat:ir", "ext:iran.dat:other"],
+      "ip": ["geoip:private", "geoip:ir"],
+      "outboundTag": "direct"
+      },
+            {
+        "outboundTag": "blocked",
+        "protocol": [
+          "bittorrent"
+        ],
+        "type": "field"
+      }
+    ]
+  }
+
+
+
+  "dns": {
+    "hosts": {
+      "dns.google": [
+        "8.8.8.8",
+        "8.8.4.4"
+      ]
+    },
+    "servers": [
+      "8.8.8.8",
+      "8.8.4.4",
+      {
+        "address": "192.168.200.2",
+        "port": 5353,
+        "domains": [
+          "domain:xray.com"
+        ],
+        "expectIPs": [
+          "geoip:cn"
+        ],
+        "skipFallback": false,
+        "clientIP": "192.168.200.2"
+      },
+      "localhost"
+    ],
+    "clientIp": "192.168.200.2",
+    "queryStrategy": "UseIP",
+    "disableCache": false,
+    "disableFallback": false,
+    "disableFallbackIfMatch": false,
+    "tag": "dns_inbound"
+  },
+
+
+##############################################################################
+##############################################################################
+
+systemctl restart xray.service && systemctl status xray.service
+
