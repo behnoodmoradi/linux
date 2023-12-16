@@ -28,8 +28,6 @@ if $DENY_EXCEPT_IRAN ; then
 
         rm -f /etc/ipset.rules > /dev/null 2>&1
         ipset save > /etc/ipset.rules /dev/null 2>&1
-
-        echo `wc -l | cat /etc/ipset.rules`
 fi
 
 #permit localhost
