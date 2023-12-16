@@ -28,6 +28,8 @@ if $DENY_EXCEPT_IRAN ; then
 
         rm -f /etc/ipset.rules > /dev/null 2>&1
         ipset save > /etc/ipset.rules /dev/null 2>&1
+
+        echo `wc -l | cat /etc/ipset.rules`
 fi
 
 #permit localhost
@@ -40,9 +42,9 @@ ip6tables -A INPUT -i lo -j ACCEPT
 ip6tables -A OUTPUT -o lo -j ACCEPT
 
 #allow related, established v4
-echo "permit ESTABLISHED,RELATED input v6"
+echo "permit ESTABLISHED,RELATED input v4"
         iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-echo "permit NEW,ESTABLISHED,RELATED input v6"
+echo "permit NEW,ESTABLISHED,RELATED input v4"
         iptables -A OUTPUT -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
 
 echo "permit ESTABLISHED,RELATED input v6"
@@ -79,9 +81,9 @@ done
 #permit udp
 for UDP in $PERMIT_UDP
 do
-        echo "permit tcp traffic on port $UDP v4"
+        echo "permit udp traffic on port $UDP v4"
                 iptables -A INPUT -p udp --dport $UDP -j ACCEPT
-        echo "permit tcp traffic on port $UDP v6"
+        echo "permit udp traffic on port $UDP v6"
                 ip6tables -A INPUT -p udp --dport $UDP -j ACCEPT
         
         
