@@ -31,60 +31,84 @@ if $DENY_EXCEPT_IRAN ; then
 fi
 
 #permit localhost
-echo "permit local traffics"
+echo "permit local v4 traffics"
 iptables -A INPUT -i lo -j ACCEPT
 iptables -A OUTPUT -o lo -j ACCEPT
 
+echo "permit local v6 traffics"
 ip6tables -A INPUT -i lo -j ACCEPT
 ip6tables -A OUTPUT -o lo -j ACCEPT
 
-#allow related, established
-iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-iptables -A OUTPUT -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+#allow related, established v4
+echo "permit ESTABLISHED,RELATED input v6"
+        iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+echo "permit NEW,ESTABLISHED,RELATED input v6"
+        iptables -A OUTPUT -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
 
-ip6tables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-ip6tables -A OUTPUT -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+echo "permit ESTABLISHED,RELATED input v6"
+        ip6tables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+echo "permit NEW,ESTABLISHED,RELATED input v6"
+        ip6tables -A OUTPUT -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
 
 #deny invalid
-iptables -A INPUT -m conntrack  --ctstate INVALID -j DROP
-iptables -A OUTPUT -m conntrack --ctstate INVALID -j DROP
+echo "deny INVALID input v4"
+        iptables -A INPUT -m conntrack  --ctstate INVALID -j DROP
+echo "deny INVALID output v4"
+        iptables -A OUTPUT -m conntrack --ctstate INVALID -j DROP
 
-ip6tables -A INPUT -m conntrack  --ctstate INVALID -j DROP
-ip6tables -A OUTPUT -m conntrack --ctstate INVALID -j DROP
+echo "deny INVALID input v6"
+        ip6tables -A INPUT -m conntrack  --ctstate INVALID -j DROP
+echo "deny INVALID output v6"
+        ip6tables -A OUTPUT -m conntrack --ctstate INVALID -j DROP
 
 #deny except iran V4
 if $DENY_EXCEPT_IRAN ; then
+        echo "deny input except $COUNTRY v4"
         iptables -A INPUT -m set ! --match-set $COUNTRY src -j DROP
 fi
 
 #permit tcp
 for TCP in $PERMIT_TCP
 do
-        iptables -A INPUT -p tcp --dport $TCP -j ACCEPT
-        ip6tables -A INPUT -p tcp --dport $TCP -j ACCEPT
+        echo "permit tcp traffic on port $TCP v4"
+                iptables -A INPUT -p tcp --dport $TCP -j ACCEPT
+        echo "permit tcp traffic on port $TCP v6"
+                ip6tables -A INPUT -p tcp --dport $TCP -j ACCEPT
 done
 
 #permit udp
 for UDP in $PERMIT_UDP
 do
-        iptables -A INPUT -p udp --dport $UDP -j ACCEPT
-        ip6tables -A INPUT -p udp --dport $UDP -j ACCEPT
+        echo "permit tcp traffic on port $UDP v4"
+                iptables -A INPUT -p udp --dport $UDP -j ACCEPT
+        echo "permit tcp traffic on port $UDP v6"
+                ip6tables -A INPUT -p udp --dport $UDP -j ACCEPT
+        
+        
 done
 
-#permit tcp
+#permit icmp
 if $PERMIT_ICMP ; then
-        iptables -A INPUT -p icmp -j ACCEPT
-        ip6tables -A INPUT -p icmp -j ACCEPT
+        echo "permit icmp traffics v4"
+                iptables -A INPUT -p icmp -j ACCEPT
+        echo "permit icmp traffics v6"
+                ip6tables -A INPUT -p icmp -j ACCEPT
 else
-        iptables -A INPUT -p icmp -j DROP
-        ip6tables -A INPUT -p icmp -j DROP
+        echo "deny icmp traffics v4"
+                iptables -A INPUT -p icmp -j DROP
+        echo "deny icmp traffics v6"
+                ip6tables -A INPUT -p icmp -j DROP
 fi
 
 
 
 #drop policy
-iptables -P INPUT DROP
-iptables -P OUTPUT DROP
+echo "change input policy to DROP v4"
+        iptables -P INPUT DROP
+echo "change output policy to DROP v4"
+        iptables -P OUTPUT DROP
 
-ip6tables -P INPUT DROP
-ip6tables -P OUTPUT DROP
+echo "change input policy to DROP v6"
+        ip6tables -P INPUT DROP
+echo "change output policy to DROP v4"
+        ip6tables -P OUTPUT DROP
