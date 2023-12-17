@@ -1,0 +1,103 @@
+{
+    "dns": {
+        "hosts": {
+            "dns.google": [
+                "8.8.8.8",
+                "8.8.4.4"
+            ]
+        },
+        "servers": [
+            "8.8.8.8",
+            "8.8.4.4",
+            {
+                "address": "X.X.X.X Server IP",
+                "port": 5353,
+                "domains": [
+                    "domain:xray.com"
+                ],
+                "expectIPs": [
+                    "geoip:cn"
+                ],
+                "skipFallback": false,
+                "clientIP": "X.X.X.X Server IP"
+            },
+            "localhost"
+        ],
+        "clientIp": "X.X.X.X Server IP",
+        "queryStrategy": "UseIP",
+        "disableCache": false,
+        "disableFallback": false,
+        "disableFallbackIfMatch": false,
+        "tag": "dns_inbound"
+    },
+    "inbounds": [
+        {
+            "port": 12315,
+            "protocol": "dokodemo-door",
+            "settings": {
+                "network": "tcp,udp,icmp",
+                "followRedirect": true,
+                "timeout": 0
+            },
+            "sniffing": {
+                "enabled": true,
+                "destOverride": [
+                    "http",
+                    "tls"
+                ]
+            }
+        }
+    ],
+    "log": {
+        "loglevel": "warning"
+    },
+    "routing": {
+        "domainStrategy": "IPIfNonMatch",
+        "rules": [
+            {
+                "type": "field",
+                "inboundTag": [
+                    "all-in"
+                ],
+                "port": 53,
+                "outboundTag": "dns-out"
+            },
+            {
+                "inboundTag": [
+                    "api"
+                ],
+                "outboundTag": "api",
+                "type": "field"
+            },
+            {
+                "ip": [
+                    "geoip:private",
+                    "geoip:ir"
+                ],
+                "outboundTag": "direct",
+                "type": "field"
+            },
+            {
+                "domainMatcher": "hybrid",
+                "type": "field",
+                "domain": [
+                    "regexp:.*\\.ir$",
+                    "ext:iran.dat:ir",
+                    "ext:iran.dat:other"
+                ],
+                "ip": [
+                    "geoip:private",
+                    "geoip:ir"
+                ],
+                "outboundTag": "direct"
+            },
+            {
+                "outboundTag": "blocked",
+                "protocol": [
+                    "bittorrent"
+                ],
+                "type": "field"
+            }
+        ]
+    }
+}
