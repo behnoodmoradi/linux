@@ -1,9 +1,11 @@
 #!/bin/bash
-PERMIT_TCP="22 443 5800 8888"
-PERMIT_UDP="8888"
-PERMIT_ICMP=false
-DENY_EXCEPT_IRAN=true
+PERMIT_TCP="22 443 8880"
+PERMIT_UDP="8880"
+PERMIT_ICMP=$false
+DENY_EXCEPT_IRAN=$true
 COUNTRY=ir
+
+file_dl=0
 
 #flush iptables
 iptables -F
@@ -14,17 +16,27 @@ if $DENY_EXCEPT_IRAN ; then
         echo 'Updating ubuntu and install ipset'
         apt update > /dev/null 2>&1
         apt install ipset -y > /dev/null 2>&1
+        if [ -f /tmp/$COUNTRY-aggregated.zone ]
+        then
+                rm -f /tmp/$COUNTRY-aggregated.zone
+        fi
 
         echo "download $COUNTRY address list"
-        wget https://www.ipdeny.com/ipblocks/data/aggregated/$COUNTRY-aggregated.zone -O /tmp/$COUNTRY-aggregated.zone > /dev/null 2>&1
+        wget -q "https://www.ipdeny.com/ipblocks/data/aggregated/$COUNTRY-aggregated.zone" -O /tmp/$COUNTRY-aggregated.zone # > /dev/null 2>&1
 
         ipset destroy $COUNTRY #/dev/null 2>&1
         ipset create $COUNTRY hash:net
 
-        for IP in `cat /tmp/$COUNTRY-aggregated.zone`
-        do
-                ipset add $COUNTRY $IP > /dev/null 2>&1
-        done
+        if [ -f /tmp/$COUNTRY-aggregated.zone ]
+        then
+                for IP in `cat /tmp/$COUNTRY-aggregated.zone`
+                do
+                        ipset add $COUNTRY $IP > /dev/null 2>&1
+                done
+                file_dl=1
+        else
+                echo "$COUNTRY-aggregated.zone did not downloaded, the country restriction did not apply!"
+        fi
 
         rm -f /etc/ipset.rules > /dev/null 2>&1
         ipset save > /etc/ipset.rules /dev/null 2>&1
@@ -62,7 +74,7 @@ echo "deny INVALID output v6"
         ip6tables -A OUTPUT -m conntrack --ctstate INVALID -j DROP
 
 #deny except iran V4
-if $DENY_EXCEPT_IRAN ; then
+if  $DENY_EXCEPT_IRAN && [ $file_dl -eq 1 ]; then
         echo "deny input except $COUNTRY v4"
         iptables -A INPUT -m set ! --match-set $COUNTRY src -j DROP
 fi
@@ -76,6 +88,7 @@ do
                 ip6tables -A INPUT -p tcp --dport $TCP -j ACCEPT
 done
 
+
 #permit udp
 for UDP in $PERMIT_UDP
 do
@@ -83,8 +96,8 @@ do
                 iptables -A INPUT -p udp --dport $UDP -j ACCEPT
         echo "permit udp traffic on port $UDP v6"
                 ip6tables -A INPUT -p udp --dport $UDP -j ACCEPT
-        
-        
+
+
 done
 
 #permit icmp
