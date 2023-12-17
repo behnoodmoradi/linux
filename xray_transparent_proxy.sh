@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# continue with this one
+https://tstrs.me/result/OTpO6oQBU87SstoFc5Uq
+
+#Install xray
+sudo apt update -y && sudo apt upgrade -y
+bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install --beta
+
+# Create r.local
+sudo cat >> /etc/rc.local << EOF
+#!/bin/bash
+ifconfig ens33 10.0.10.251 netmask 255.255.255.0
+route add default gw 10.0.10.254
+
+iptables-restore < /etc/network/iptables.up.rules
+EOF
+# Create r.local
+
+
+sudo chmod 755 /etc/rc.local
+sudo echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf && sysctl -p
+
+sudo iptables -t nat -N XRAY
+sudo iptables -t nat -A XRAY -d 192.168.201.0/30 -j RETURN
+sudo iptables -t nat -A XRAY -p tcp -j REDIRECT --to-ports 12315
+sudo iptables -t nat -A XRAY -p udp -j REDIRECT --to-ports 12315
+sudo iptables -t nat -A XRAY -p icmp -j REDIRECT --to-ports 12315
+sudo iptables -t nat -A PREROUTING -p tcp -j XRAY
+sudo iptables -t nat -A PREROUTING -p udp -j XRAY
+sudo iptables -t nat -A PREROUTING -p icmp -j XRAY
+
+iptables-save > /etc/network/iptables.up.rules
+iptables-restore < /etc/network/iptables.up.rules
+
+### Increase limits: https://github.com/SasukeFreestyle/XTLS-Iran-Reality ####
+echo "net.ipv4.tcp_keepalive_time = 90" >> /etc/sysctl.conf
+echo "net.ipv4.ip_local_port_range = 1024 65535" >> /etc/sysctl.conf
+echo "net.ipv4.tcp_fastopen = 3" >> /etc/sysctl.conf
+echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
+echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
+echo "fs.file-max = 65535000" >> /etc/sysctl.conf && sysctl -p
+
+echo "* soft     nproc          655350" >> /etc/security/limits.conf
+echo "* hard     nproc          655350" >> /etc/security/limits.conf
+echo "* soft     nofile         655350" >> /etc/security/limits.conf
+echo "* hard     nofile         655350" >> /etc/security/limits.conf
+echo "root soft     nproc          655350" >> /etc/security/limits.conf
+echo "root hard     nproc          655350" >> /etc/security/limits.conf
+echo "root soft     nofile         655350" >> /etc/security/limits.conf
+echo "root hard     nofile         655350" >> /etc/security/limits.conf && sysctl -p
+
+# https://github.com/iranxray/hope/blob/main/routing.md#%D9%85%D8%B3%D8%AF%D9%88%D8%AF%D8%B3%D8%A7%D8%B2%DB%8C-%D8%A7%D8%B2-%D8%B3%D9%85%D8%AA-%D8%B3%D8%B1%D9%88%D8%B1
+# https://github.com/bootmortis/iran-hosted-domains
+# https://github.com/bootmortis/iran-hosted-domains/releases/latest/download/iran.dat
+
+
+wget https://github.com/bootmortis/iran-hosted-domains/releases/latest/download/iran.dat -O /usr/local/share/xray/iran.dat
+
+
+# <<<<<<<<<< update json file first >>>>>>>>>>
+
+systemctl restart xray.service && systemctl status xray.service
